@@ -1,7 +1,7 @@
 import copy
-from typing import List
+from typing import List, Tuple
 from player import Player
-
+from random import choices
 import yaml
 import numpy as np
 from numpy.random import default_rng
@@ -53,7 +53,7 @@ class Evolution:
             parents = prev_players
 
             # Parent Selection with Q Tournament
-            parents = self.tournament(prev_players, num_players)
+            parents = self.q_tournament(prev_players, num_players)
 
             # Parent Selection with Roulette Wheel
             parents = self.roulette_wheel(prev_players, num_players)
@@ -110,9 +110,16 @@ class Evolution:
         return players[:num_players]
 
     @staticmethod
-    def tournament(players, num_players):
-        players.sort(key=lambda player: player.fitness, reverse=True)
-        return players[:num_players]
+    def q_tournament(players, num_players, q=5):
+        winners = []
+        for tournament_i in range(num_players):
+            tournament_players = choices(players, q)
+            tournament_players.sort(key=lambda player: player.fitness, reverse=True)
+            winner = tournament_players[0]
+
+            winners.append(winner)
+
+        return winners
 
     @staticmethod
     def roulette_wheel(players, num_players):
@@ -135,7 +142,7 @@ class Evolution:
         selected = np.searchsorted(fitness_cumsum, selectors)
         return selected
 
-    def crossover(self, parent_1: Player, parent_2: Player):
+    def crossover(self, parent_1: Player, parent_2: Player) -> Tuple[Player, Player]:
         layers = parent_1.nn.layer_size
 
         child_1 = self.clone_player(parent_1)
@@ -155,6 +162,8 @@ class Evolution:
 
             child_2.nn.biases[layer_number][:cut_off] = parent_2.nn.biases[layer_number][:cut_off]
             child_2.nn.biases[layer_number][cut_off:] = parent_1.nn.biases[layer_number][cut_off:]
+
+        return child_1, child_2
 
     def mutate(self, child: Player):
         mutation_prob = 0.3
