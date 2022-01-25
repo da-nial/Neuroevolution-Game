@@ -1,7 +1,7 @@
 import copy
 from typing import List, Tuple
 from player import Player
-from random import choices
+from random import sample
 import yaml
 import numpy as np
 from numpy.random import default_rng
@@ -22,19 +22,21 @@ class Evolution:
         :param num_players: number of players that we return
         """
         # TODO (Implement top-k algorithm here)
-        players.sort(key=lambda player: player.fitness, reverse=True)
-        fitnesses = [player.fitness for player in players]
+        # selected_players = self.sorted_selection(players, num_players)
+
+        # TODO (Implement Q Tournament)
+        selected_players = self.q_tournament(players, num_players)
 
         # TODO (Additional: Implement roulette wheel here)
-        self.roulette_wheel(players, num_players)
+        # selected_players = self.roulette_wheel(players, num_players)
 
         # TODO (Additional: Implement SUS here)
-        self.sus(players, num_players)
+        # selected_players = self.sus(players, num_players)
 
         # TODO (Additional: Learning curve)
-        self.update_metric_points(fitnesses)
+        self.update_metric_points(players)
 
-        return players[: num_players]
+        return selected_players
 
     def generate_new_population(self, num_players, prev_players=None):
         """
@@ -76,7 +78,7 @@ class Evolution:
                     [child_1, child_2]
                 )
 
-            childs = prev_players  # TODO DELETE THIS AFTER YOUR IMPLEMENTATION
+            # childs = prev_players  # TODO DELETE THIS AFTER YOUR IMPLEMENTATION
             return childs
 
     def clone_player(self, player) -> Player:
@@ -88,7 +90,8 @@ class Evolution:
         new_player.fitness = player.fitness
         return new_player
 
-    def update_metric_points(self, fitnesses):
+    def update_metric_points(self, players):
+        fitnesses = [player.fitness for player in players]
         fitnesses.sort(reverse=True)
 
         new_metric_points = {
@@ -98,11 +101,19 @@ class Evolution:
         }
         with open('points.yml', 'r') as f:
             metric_points = yaml.safe_load(f)
-            for metric, points in metric_points.keys():
+            if metric_points is None:
+                metric_points = {
+                    'max': [],
+                    'avg': [],
+                    'min': []
+                }
+
+            for metric in metric_points.keys():
                 metric_points[metric].append(
                     new_metric_points.get(metric)
                 )
-            yaml.safe_dump(metric_points, f)  # Also note the safe_dump
+        with open('points.yml', 'w') as f:
+            yaml.safe_dump(metric_points, f)
 
     @staticmethod
     def sorted_selection(players, num_players):
@@ -113,7 +124,7 @@ class Evolution:
     def q_tournament(players, num_players, q=5):
         winners = []
         for tournament_i in range(num_players):
-            tournament_players = choices(players, q)
+            tournament_players = sample(players, q)
             tournament_players.sort(key=lambda player: player.fitness, reverse=True)
             winner = tournament_players[0]
 
@@ -127,7 +138,14 @@ class Evolution:
 
         sum_fitnesses = sum(fitnesses)
         selection_probs = [player.fitness / sum_fitnesses for player in players]
-        return players[rng.choice(num_players, p=selection_probs)]
+
+        selected_players = []
+        for i in range(num_players):
+            selected_players.append(
+                players[rng.choice(len(players), p=selection_probs)]
+            )
+
+        return selected_players
 
     @staticmethod
     def sus(players, num_players):
@@ -139,7 +157,9 @@ class Evolution:
         start = rng.random() * step  # sample a start point in [0, step)
         # get N evenly-spaced points in the wheel
         selectors = np.arange(start, fitness_sum, step)
-        selected = np.searchsorted(fitness_cumsum, selectors)
+        selected_indexes = np.searchsorted(fitness_cumsum, selectors)
+        selected = [players[index] for index in selected_indexes]
+
         return selected
 
     def crossover(self, parent_1: Player, parent_2: Player) -> Tuple[Player, Player]:
@@ -148,7 +168,7 @@ class Evolution:
         child_1 = self.clone_player(parent_1)
         child_2 = self.clone_player(parent_2)
 
-        for layer_number, layer in enumerate(layers):
+        for layer_number, layer in enumerate(layers[:-1]):
             cut_off = layer // 2
 
             child_1.nn.weights[layer_number][:cut_off] = parent_1.nn.weights[layer_number][:cut_off]
@@ -157,8 +177,8 @@ class Evolution:
             child_2.nn.weights[layer_number][:cut_off] = parent_2.nn.weights[layer_number][:cut_off]
             child_2.nn.weights[layer_number][cut_off:] = parent_1.nn.weights[layer_number][cut_off:]
 
-            child_1.nn.biases[layer_number][:cut_off] = parent_1.nn.weights[layer_number][:cut_off]
-            child_1.nn.biases[layer_number][cut_off:] = parent_2.nn.weights[layer_number][cut_off:]
+            child_1.nn.biases[layer_number][:cut_off] = parent_1.nn.biases[layer_number][:cut_off]
+            child_1.nn.biases[layer_number][cut_off:] = parent_2.nn.biases[layer_number][cut_off:]
 
             child_2.nn.biases[layer_number][:cut_off] = parent_2.nn.biases[layer_number][:cut_off]
             child_2.nn.biases[layer_number][cut_off:] = parent_1.nn.biases[layer_number][cut_off:]
