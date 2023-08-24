@@ -34,8 +34,7 @@ hidden neurons, and 2 output neurons.
 
 The `evolution.py` file contains the following methods:
 
-- `next_population_selection`: Decides the strategy for selecting agents. **Top-K**, **Roulette wheel**, **SUS**, and *
-  *Q-Tournament**
+- `next_population_selection`: Decides the strategy for selecting agents. **Top-K**, **Roulette wheel**, **SUS**, and **Q-Tournament**
   strategies are implemented.
 - `generate_new_population`: Handles parent selection and generates new agents. The mentioned strategies are implemented
   for parent selection. Crossover and mutation are applied to pairs of selected parents.
