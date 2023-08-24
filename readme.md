@@ -9,7 +9,7 @@ limitation, evolutionary algorithms are used to optimize the neural network's we
 
 ![docs/Neuroevolution-Game.png](docs/Neuroevolution-Game.png)
 
-For full instructions on how to use the project, please refer to the [instructions.pdf](docs/instructions.pdf) file in
+For the complete description of the project, please refer to the [instructions.pdf](docs/instructions.pdf), which explains the game and the solution algorithm in detail, in
 Persian.
 
 ## Evolutionary Algorithm
